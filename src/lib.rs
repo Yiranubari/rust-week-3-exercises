@@ -45,7 +45,33 @@ impl CompactSize {
         // TODO: Decode CompactSize, returning value and number of bytes consumed.
         // First check if bytes is empty.
         // Check that enough bytes are available based on prefix.
-        todo!()
+        if bytes.is_empty() {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+        let first = bytes[0];
+        if first < 253 {
+            Ok((CompactSize { value: first as u64 }, 1))
+        } else if first == 0xFD {
+            if bytes.len() < 3 {
+                return Err(BitcoinError::InsufficientBytes);
+            }
+            let value = u16::from_le_bytes([bytes[1], bytes[2]]) as u64;
+            Ok((CompactSize { value }, 3))
+        } else if first == 0xFE {
+            if bytes.len() < 5 {
+                return Err(BitcoinError::InsufficientBytes);
+            }
+            let value = u32::from_le_bytes([bytes[1], bytes[2], bytes[3], bytes[4]]) as u64;
+            Ok((CompactSize { value }, 5))
+        } else {
+            if bytes.len() < 9 {
+                return Err(BitcoinError::InsufficientBytes);
+            }
+            let value = u64::from_le_bytes([
+                bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8]
+            ]);
+            Ok((CompactSize { value }, 9))
+        }
     }
 }
 
