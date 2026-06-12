@@ -16,7 +16,7 @@ pub enum BitcoinError {
 impl CompactSize {
     pub fn new(value: u64) -> Self {
         // TODO: Construct a CompactSize from a u64 value
-        Self { value}
+        Self { value }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -50,7 +50,12 @@ impl CompactSize {
         }
         let first = bytes[0];
         if first < 253 {
-            Ok((CompactSize { value: first as u64 }, 1))
+            Ok((
+                CompactSize {
+                    value: first as u64,
+                },
+                1,
+            ))
         } else if first == 0xFD {
             if bytes.len() < 3 {
                 return Err(BitcoinError::InsufficientBytes);
@@ -68,7 +73,7 @@ impl CompactSize {
                 return Err(BitcoinError::InsufficientBytes);
             }
             let value = u64::from_le_bytes([
-                bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8]
+                bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7], bytes[8],
             ]);
             Ok((CompactSize { value }, 9))
         }
@@ -139,7 +144,13 @@ impl OutPoint {
         let mut txid_bytes = [0u8; 32];
         txid_bytes.copy_from_slice(&bytes[0..32]);
         let vout = u32::from_le_bytes([bytes[32], bytes[33], bytes[34], bytes[35]]);
-        Ok((OutPoint { txid: Txid(txid_bytes), vout }, 36))
+        Ok((
+            OutPoint {
+                txid: Txid(txid_bytes),
+                vout,
+            },
+            36,
+        ))
     }
 }
 
@@ -151,18 +162,31 @@ pub struct Script {
 impl Script {
     pub fn new(bytes: Vec<u8>) -> Self {
         // TODO: Simple constructor
-        todo!()
+        Self { bytes }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         // TODO: Prefix with CompactSize (length), then raw bytes
-        todo!()
+        let mut bytes = CompactSize::new(self.bytes.len() as u64).to_bytes();
+        bytes.extend_from_slice(&self.bytes);
+        bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
         // TODO: Parse CompactSize prefix, then read that many bytes
         // Return error if not enough bytes
-        todo!()
+        let (length_prefix, prefix_size) = CompactSize::from_bytes(bytes)?;
+        let total_size = prefix_size + length_prefix.value as usize;
+        if bytes.len() < total_size {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+        let script_bytes = &bytes[prefix_size..total_size];
+        Ok((
+            Script {
+                bytes: script_bytes.to_vec(),
+            },
+            total_size,
+        ))
     }
 }
 
@@ -170,7 +194,7 @@ impl Deref for Script {
     type Target = Vec<u8>;
     fn deref(&self) -> &Self::Target {
         // TODO: Allow &Script to be used as &[u8]
-        todo!()
+        &self.bytes
     }
 }
 
@@ -220,7 +244,7 @@ impl BitcoinTransaction {
         // - CompactSize (number of inputs)
         // - each input serialized
         // - lock_time (4 bytes LE)
-            todo!()
+        todo!()
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
