@@ -208,12 +208,20 @@ pub struct TransactionInput {
 impl TransactionInput {
     pub fn new(previous_output: OutPoint, script_sig: Script, sequence: u32) -> Self {
         // TODO: Basic constructor
-        todo!()
+        Self {
+            previous_output,
+            script_sig,
+            sequence,
+        }
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
         // TODO: Serialize: OutPoint + Script (with CompactSize) + sequence (4 bytes LE)
-        todo!()
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&self.previous_output.to_bytes());
+        bytes.extend_from_slice(&self.script_sig.to_bytes());
+        bytes.extend_from_slice(&self.sequence.to_le_bytes());
+        bytes
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Result<(Self, usize), BitcoinError> {
@@ -221,7 +229,27 @@ impl TransactionInput {
         // - OutPoint (36 bytes)
         // - Script (with CompactSize)
         // - Sequence (4 bytes)
-        todo!()
+        let (previous_output, outpoint_size) = OutPoint::from_bytes(bytes)?;
+        let script_start = outpoint_size;
+        let (script_sig, script_size) = Script::from_bytes(&bytes[script_start..])?;
+        let sequence_start = script_start + script_size;
+        if bytes.len() < sequence_start + 4 {
+            return Err(BitcoinError::InsufficientBytes);
+        }
+        let sequence = u32::from_le_bytes([
+            bytes[sequence_start],
+            bytes[sequence_start + 1],
+            bytes[sequence_start + 2],
+            bytes[sequence_start + 3],
+        ]);
+        Ok((
+            TransactionInput {
+                previous_output,
+                script_sig,
+                sequence,
+            },
+            sequence_start + 4,
+        ))
     }
 }
 
