@@ -84,7 +84,8 @@ impl Serialize for Txid {
         S: serde::Serializer,
     {
         // TODO: Serialize as a hex-encoded string (32 bytes => 64 hex characters)
-        todo!()
+        let hex_string = hex::encode(self.0);
+        serializer.serialize_str(&hex_string)
     }
 }
 
@@ -95,7 +96,14 @@ impl<'de> Deserialize<'de> for Txid {
     {
         // TODO: Parse hex string into 32-byte array
         // Use `hex::decode`, validate length = 32
-        todo!()
+        let hex_string = String::deserialize(deserializer)?;
+        let bytes = hex::decode(&hex_string).map_err(serde::de::Error::custom)?;
+        if bytes.len() != 32 {
+            return Err(serde::de::Error::custom("Txid must be 32 bytes"));
+        }
+        let mut txid_bytes = [0u8; 32];
+        txid_bytes.copy_from_slice(&bytes);
+        Ok(Txid(txid_bytes))
     }
 }
 
